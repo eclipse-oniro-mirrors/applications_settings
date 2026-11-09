@@ -24,7 +24,8 @@ ohos_shared_library("settings_common") {
 
   sources = [
     "src/napi_bundle_util.cpp",
-    "src/napi_sys_event_util.cpp"
+    "src/napi_sys_event_util.cpp",
+    "src/settings_data_bucket.cpp"
   ]
 
   public_configs = [":settings_common_config"]
@@ -34,8 +35,10 @@ ohos_shared_library("settings_common") {
   external_deps = [
     "ability_runtime:ability_manager",
     "ability_runtime:ui_extension",
+    "data_share:datashare_common",
     "hilog:libhilog",
     "hisysevent:libhisysevent",
+    "relational_store:native_rdb",
     "samgr:samgr_proxy",
   ]
 

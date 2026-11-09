@@ -22,13 +22,13 @@
 #include "os_account_manager.h"
 #include "securec.h"
 #include "uri.h"
+#include "napi_bundle_util.h"
+#include "settings_data_bucket.h"
 
 namespace OHOS {
 namespace CJSystemapi {
 namespace CJSettings {
 const std::string SETTINGS_DATA_BASE_URI = "dataability:///com.ohos.settingsdata.DataAbility";
-const std::string SETTINGS_DATA_FIELD_KEYWORD = "KEYWORD";
-const std::string SETTINGS_DATA_FIELD_VALUE = "VALUE";
 const int32_t PERMISSION_EXCEPTION_CODE = 201;
 const int32_t PERMISSION_DENIED_CODE = -2;
 const int32_t USERID_HELPER_NUMBER = 100;
@@ -136,22 +136,36 @@ bool SetValueExecuteExt(SettingsInfo* info, const std::string setValue, int32_t*
         *ret = 0;
         return false;
     }
-    OHOS::DataShare::DataShareValuesBucket val;
-    val.Put(SETTINGS_DATA_FIELD_KEYWORD, info->key);
-    val.Put(SETTINGS_DATA_FIELD_VALUE, setValue);
     std::string tmpIdStr = GetUserIdStr();
     std::string strUri = GetStageUriStr(info->tableName, tmpIdStr, info->key);
     LOGD("Set uri : %{public}s, key: %{public}s", strUri.c_str(), info->key.c_str());
     OHOS::Uri uri(strUri);
 
     OHOS::DataShare::DataSharePredicates predicates;
-    predicates.EqualTo(SETTINGS_DATA_FIELD_KEYWORD, info->key);
+    predicates.EqualTo(OHOS::Settings::SETTINGS_DATA_FIELD_KEYWORD, info->key);
 
-    int32_t retInt = info->dataShareHelper->Update(uri, predicates, val);
+    std::string callerBundle = OHOS::Settings::BundleUtil::GetCurrentBundleName();
+    std::string timestampStr = OHOS::Settings::GetCurrentTimestampStr();
+    auto bucketWithDfx = OHOS::Settings::BuildDataShareBucket(
+        info->key, setValue, callerBundle, timestampStr, true);
+
+    int32_t retInt = info->dataShareHelper->Update(uri, predicates, bucketWithDfx);
     LOGD("update ret: %{public}d", retInt);
     if (retInt <= 0) {
-        retInt = info->dataShareHelper->Insert(uri, val);
+        retInt = info->dataShareHelper->Insert(uri, bucketWithDfx);
         LOGD("insert ret: %{public}d", retInt);
+    }
+    if (retInt <= 0) {
+        LOGI("SVE dfx retry, k=%{public}s", info->key.c_str());
+        auto bucketWithoutDfx = OHOS::Settings::BuildDataShareBucket(
+            info->key, setValue, callerBundle, timestampStr, false);
+        retInt = info->dataShareHelper->Update(uri, predicates, bucketWithoutDfx);
+        if (retInt <= 0) {
+            retInt = info->dataShareHelper->Insert(uri, bucketWithoutDfx);
+        }
+        if (retInt <= 0) {
+            LOGE("SVE retry f, k=%{public}s, r=%{public}d", info->key.c_str(), retInt);
+        }
     }
     return CheckoutStatus(retInt, ret);
 }
@@ -196,10 +210,10 @@ bool Settings::SetValue(
 void QueryValue(SettingsInfo* info, OHOS::Uri uri)
 {
     std::vector<std::string> columns;
-    columns.push_back(SETTINGS_DATA_FIELD_VALUE);
+    columns.push_back(OHOS::Settings::SETTINGS_DATA_FIELD_VALUE);
 
     DataShare::DataSharePredicates predicates;
-    predicates.EqualTo(SETTINGS_DATA_FIELD_KEYWORD, info->key);
+    predicates.EqualTo(OHOS::Settings::SETTINGS_DATA_FIELD_KEYWORD, info->key);
 
     DataShare::DatashareBusinessError businessError;
     std::shared_ptr<DataShare::DataShareResultSet> resultset = nullptr;

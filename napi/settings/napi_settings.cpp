@@ -23,11 +23,13 @@
 #include "napi_settings_log.h"
 #include "values_bucket.h"
 #include "datashare_business_error.h"
+#include "settings_data_bucket.h"
 
 #include "napi_base_context.h"
 #include "os_account_manager.h"
 #include "parameters.h"
 #include "napi_sys_event_util.h"
+#include "napi_bundle_util.h"
 
 using namespace OHOS::AppExecFwk;
 using namespace OHOS::DataShare;
@@ -36,8 +38,6 @@ using namespace OHOS::AccountSA;
 namespace OHOS {
 namespace Settings {
 const std::string SETTINGS_DATA_BASE_URI = "dataability:///com.ohos.settingsdata.DataAbility";
-const std::string SETTINGS_DATA_FIELD_KEYWORD = "KEYWORD";
-const std::string SETTINGS_DATA_FIELD_VALUE = "VALUE";
 const std::string PERMISSION_EXCEPTION = "Permission denied";
 const std::string DEFAULT_ANONYMOUS = "******";
 const int PERMISSION_EXCEPTION_CODE = 201;
@@ -653,10 +653,6 @@ void SetValueExecuteExt(napi_env env, void *data, const std::string setValue)
         return;
     }
 
-    OHOS::DataShare::DataShareValuesBucket val;
-    val.Put(SETTINGS_DATA_FIELD_KEYWORD, asyncCallbackInfo->key);
-    val.Put(SETTINGS_DATA_FIELD_VALUE, setValue);
-    
     int tmpId = GetUserId();
     std::string strUri = GetStageUriStr(asyncCallbackInfo->tableName, tmpId, asyncCallbackInfo->key);
     OHOS::Uri uri(strUri);
@@ -664,8 +660,12 @@ void SetValueExecuteExt(napi_env env, void *data, const std::string setValue)
     OHOS::DataShare::DataSharePredicates predicates;
     predicates.EqualTo(SETTINGS_DATA_FIELD_KEYWORD, asyncCallbackInfo->key);
 
-    // update first.
-    int retInt = dataShareHelper->Update(uri, predicates, val);
+    std::string callerBundle = OHOS::Settings::BundleUtil::GetCurrentBundleName();
+    std::string timestampStr = OHOS::Settings::GetCurrentTimestampStr();
+    auto bucketWithDfx = OHOS::Settings::BuildDataShareBucket(
+        asyncCallbackInfo->key, setValue, callerBundle, timestampStr, true);
+
+    int retInt = dataShareHelper->Update(uri, predicates, bucketWithDfx);
     if (retInt == PERMISSION_DENIED_CODE) {
         SETTING_LOG_ERROR("SVE np, k=%{public}s", asyncCallbackInfo->key.c_str());
         asyncCallbackInfo->status = PERMISSION_DENIED_CODE;
@@ -674,18 +674,30 @@ void SetValueExecuteExt(napi_env env, void *data, const std::string setValue)
     if (retInt < 0 && !(asyncCallbackInfo->useNonSilent)) {
         dataShareHelper = getNoSilentDataShareHelper(env, asyncCallbackInfo);
         if (dataShareHelper == nullptr) {
-            SETTING_LOG_ERROR("SVE k=%{public}s, nsh null",
-                asyncCallbackInfo->key.c_str());
+            SETTING_LOG_ERROR("SVE k=%{public}s, nsh null", asyncCallbackInfo->key.c_str());
             asyncCallbackInfo->status = STATUS_ERROR_CODE;
             return;
         }
-        retInt = dataShareHelper->Update(uri, predicates, val);
+        retInt = dataShareHelper->Update(uri, predicates, bucketWithDfx);
     }
     if (retInt <= 0) {
-        // retry to insert.
-        retInt = dataShareHelper->Insert(uri, val);
+        // retry insert with dfx
+        retInt = dataShareHelper->Insert(uri, bucketWithDfx);
         if (retInt <= 0) {
             SETTING_LOG_ERROR("SVE i f, k=%{public}s, r=%{public}d", asyncCallbackInfo->key.c_str(), retInt);
+        }
+    }
+    if (retInt <= 0) {
+        // dfx columns may not exist in older schema, retry without dfx
+        SETTING_LOG_WARN("SVE dfx retry, k=%{public}s", asyncCallbackInfo->key.c_str());
+        auto bucketWithoutDfx = OHOS::Settings::BuildDataShareBucket(
+            asyncCallbackInfo->key, setValue, callerBundle, timestampStr, false);
+        retInt = dataShareHelper->Update(uri, predicates, bucketWithoutDfx);
+        if (retInt <= 0) {
+            retInt = dataShareHelper->Insert(uri, bucketWithoutDfx);
+        }
+        if (retInt <= 0) {
+            SETTING_LOG_ERROR("SVE retry f, k=%{public}s, r=%{public}d", asyncCallbackInfo->key.c_str(), retInt);
         }
     }
     if (retInt > 0 && asyncCallbackInfo->useNonSilent) {
@@ -1166,9 +1178,10 @@ napi_value napi_set_value_sync(napi_env env, napi_callback_info info)
     std::string argsName = unwrap_string_from_js(env, args[PARAM1]);
     std::string argsDefaultValue = unwrap_string_from_js(env, args[PARAM2]);
 
-    OHOS::NativeRdb::ValuesBucket val;
-    val.PutString(SETTINGS_DATA_FIELD_KEYWORD, argsName);
-    val.PutString(SETTINGS_DATA_FIELD_VALUE, argsDefaultValue);
+    std::string callerBundle = OHOS::Settings::BundleUtil::GetCurrentBundleName();
+    std::string timestampStr = OHOS::Settings::GetCurrentTimestampStr();
+    auto bucketWithDfx = OHOS::Settings::BuildRdbBucket(
+        argsName, argsDefaultValue, callerBundle, timestampStr, true);
 
     std::vector<std::string> columns;
     columns.push_back(SETTINGS_DATA_FIELD_VALUE);
@@ -1193,12 +1206,25 @@ napi_value napi_set_value_sync(napi_env env, napi_callback_info info)
     if (dataAbilityHelper != nullptr) {
         // insert
         if (resultSet == nullptr || numRows == 0) {
-            retInt = dataAbilityHelper->Insert(*uri, val);
+            retInt = dataAbilityHelper->Insert(*uri, bucketWithDfx);
             SETTING_LOG_INFO("n_s_v aft In");
         // update
         } else {
-            retInt = dataAbilityHelper->Update(*uri, val, predicates);
+            retInt = dataAbilityHelper->Update(*uri, bucketWithDfx, predicates);
             SETTING_LOG_INFO("n_s_v aft Up");
+        }
+        if (retInt <= 0) {
+            SETTING_LOG_WARN("n_s_v dfx retry, k=%{public}s", argsName.c_str());
+            auto bucketWithoutDfx = OHOS::Settings::BuildRdbBucket(
+                argsName, argsDefaultValue, callerBundle, timestampStr, false);
+            if (resultSet == nullptr || numRows == 0) {
+                retInt = dataAbilityHelper->Insert(*uri, bucketWithoutDfx);
+            } else {
+                retInt = dataAbilityHelper->Update(*uri, bucketWithoutDfx, predicates);
+            }
+            if (retInt <= 0) {
+                SETTING_LOG_ERROR("n_s_v retry f, k=%{public}s, r=%{public}d", argsName.c_str(), retInt);
+            }
         }
         // notify change
         if (retInt != 0) {
@@ -1233,9 +1259,10 @@ void SetValueExecuteCB(napi_env env, void *data)
     std::string argsName = asyncCallbackInfo->key;
     std::string argsDefaultValue = asyncCallbackInfo->value;
 
-    OHOS::NativeRdb::ValuesBucket val;
-    val.PutString(SETTINGS_DATA_FIELD_KEYWORD, argsName);
-    val.PutString(SETTINGS_DATA_FIELD_VALUE, argsDefaultValue);
+    std::string callerBundle = OHOS::Settings::BundleUtil::GetCurrentBundleName();
+    std::string timestampStr = OHOS::Settings::GetCurrentTimestampStr();
+    auto bucketWithDfx = OHOS::Settings::BuildRdbBucket(
+        argsName, argsDefaultValue, callerBundle, timestampStr, true);
 
     OHOS::NativeRdb::DataAbilityPredicates predicates;
     predicates.EqualTo(SETTINGS_DATA_FIELD_KEYWORD, argsName);
@@ -1243,12 +1270,24 @@ void SetValueExecuteCB(napi_env env, void *data)
     std::shared_ptr<Uri> uri = std::make_shared<Uri>(SETTINGS_DATA_BASE_URI);
     SETTING_LOG_INFO("execute bef d_A_H->Update");
     // update first
-    int retInt = asyncCallbackInfo->dataAbilityHelper->Update(*uri, val, predicates);
+    int retInt = asyncCallbackInfo->dataAbilityHelper->Update(*uri, bucketWithDfx, predicates);
     SETTING_LOG_ERROR("update ret: %{public}d", retInt);
     if (retInt <= 0) {
         // retry to insert
-        retInt = asyncCallbackInfo->dataAbilityHelper->Insert(*uri, val);
+        retInt = asyncCallbackInfo->dataAbilityHelper->Insert(*uri, bucketWithDfx);
         SETTING_LOG_ERROR("insert ret: %{public}d", retInt);
+    }
+    if (retInt <= 0) {
+        SETTING_LOG_WARN("SVE dfx retry, k=%{public}s", argsName.c_str());
+        auto bucketWithoutDfx = OHOS::Settings::BuildRdbBucket(
+            argsName, argsDefaultValue, callerBundle, timestampStr, false);
+        retInt = asyncCallbackInfo->dataAbilityHelper->Update(*uri, bucketWithoutDfx, predicates);
+        if (retInt <= 0) {
+            retInt = asyncCallbackInfo->dataAbilityHelper->Insert(*uri, bucketWithoutDfx);
+        }
+        if (retInt <= 0) {
+            SETTING_LOG_ERROR("SVE retry f, k=%{public}s, r=%{public}d", argsName.c_str(), retInt);
+        }
     }
     // notify change
     if (retInt > 0) {

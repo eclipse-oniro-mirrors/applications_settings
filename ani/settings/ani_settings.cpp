@@ -27,6 +27,8 @@
 #include "os_account_manager.h"
 #include "parameters.h"
 #include "napi_sys_event_util.h"
+#include "napi_bundle_util.h"
+#include "settings_data_bucket.h"
 
 using namespace OHOS::AppExecFwk;
 using namespace OHOS::DataShare;
@@ -35,8 +37,6 @@ using namespace OHOS::AccountSA;
 namespace OHOS {
 namespace Settings {
 const std::string SETTINGS_DATA_BASE_URI = "dataability:///com.ohos.settingsdata.DataAbility";
-const std::string SETTINGS_DATA_FIELD_KEYWORD = "KEYWORD";
-const std::string SETTINGS_DATA_FIELD_VALUE = "VALUE";
 const std::string PERMISSION_EXCEPTION = "Permission denied";
 const int PERMISSION_EXCEPTION_CODE = 201;
 const int QUERY_SUCCESS_CODE = 1;
@@ -514,10 +514,6 @@ void SetValueExecuteExt(ani_env *env, void *data, const std::string setValue)
         return;
     }
 
-    OHOS::DataShare::DataShareValuesBucket val;
-    val.Put(SETTINGS_DATA_FIELD_KEYWORD, asyncCallbackInfo->key);
-    val.Put(SETTINGS_DATA_FIELD_VALUE, setValue);
-
     int currentUserId = -1;
     OHOS::AccountSA::OsAccountManager::GetOsAccountLocalIdFromProcess(currentUserId);
     int tmpId = 100;
@@ -538,13 +534,30 @@ void SetValueExecuteExt(ani_env *env, void *data, const std::string setValue)
     OHOS::DataShare::DataSharePredicates predicates;
     predicates.EqualTo(SETTINGS_DATA_FIELD_KEYWORD, asyncCallbackInfo->key);
 
+    std::string callerBundle = OHOS::Settings::BundleUtil::GetCurrentBundleName();
+    std::string timestampStr = OHOS::Settings::GetCurrentTimestampStr();
+    auto bucketWithDfx = OHOS::Settings::BuildDataShareBucket(
+        asyncCallbackInfo->key, setValue, callerBundle, timestampStr, true);
+
     // update first.
-    int retInt = asyncCallbackInfo->dataShareHelper->Update(uri, predicates, val);
+    int retInt = asyncCallbackInfo->dataShareHelper->Update(uri, predicates, bucketWithDfx);
     SETTING_LOG_WARN("update ret: %{public}d", retInt);
     if (retInt <= 0) {
         // retry to insert.
-        retInt = asyncCallbackInfo->dataShareHelper->Insert(uri, val);
+        retInt = asyncCallbackInfo->dataShareHelper->Insert(uri, bucketWithDfx);
         SETTING_LOG_ERROR("insert ret: %{public}d", retInt);
+    }
+    if (retInt <= 0) {
+        SETTING_LOG_WARN("SVE dfx retry, k=%{public}s", asyncCallbackInfo->key.c_str());
+        auto bucketWithoutDfx = OHOS::Settings::BuildDataShareBucket(
+            asyncCallbackInfo->key, setValue, callerBundle, timestampStr, false);
+        retInt = asyncCallbackInfo->dataShareHelper->Update(uri, predicates, bucketWithoutDfx);
+        if (retInt <= 0) {
+            retInt = asyncCallbackInfo->dataShareHelper->Insert(uri, bucketWithoutDfx);
+        }
+        if (retInt <= 0) {
+            SETTING_LOG_ERROR("SVE retry f, k=%{public}s, r=%{public}d", asyncCallbackInfo->key.c_str(), retInt);
+        }
     }
     if (retInt > 0 && !asyncCallbackInfo->useSilent) {
         SETTING_LOG_INFO("not use silent and notifyChange!");
