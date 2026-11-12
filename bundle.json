@@ -45,7 +45,8 @@
                 "access_token",
                 "jsoncpp",
                 "node",
-                "libuv"
+                "libuv",
+                "imf"
             ],
             "third_party": []
         },

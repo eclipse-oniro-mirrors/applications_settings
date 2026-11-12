@@ -34,6 +34,8 @@ ohos_shared_library("settings_ani") {
 
   version_script = "settings_ani.versionscript"
 
+  defines = []
+
   external_deps = [
     "ability_base:want",
     "ability_base:zuri",
@@ -61,6 +63,11 @@ ohos_shared_library("settings_ani") {
     "jsoncpp:jsoncpp",
     "node:node_header_notice"
   ]
+
+  if (target_platform == "phone" || target_platform == "tablet") {
+      external_deps += ["imf:inputmethod_extension"]
+      defines += ["SETTINGS_SUPPORT_IMF"]
+  }
 
   relative_install_dir = "module"
   subsystem_name = "applications"

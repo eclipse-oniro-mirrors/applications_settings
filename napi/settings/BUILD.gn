@@ -31,6 +31,8 @@ ohos_shared_library("settings") {
     "./open_network_settings/napi_open_settings_page_util.cpp",
   ]
 
+  defines = []
+
   external_deps = [
     "ability_base:want",
     "ability_base:zuri",
@@ -58,6 +60,11 @@ ohos_shared_library("settings") {
     "node:node_header_notice",
     "libuv:uv"
   ]
+
+  if (target_platform == "phone" || target_platform == "tablet") {
+    external_deps += ["imf:inputmethod_extension"]
+    defines += ["SETTINGS_SUPPORT_IMF"]
+  }
 
   relative_install_dir = "module"
 

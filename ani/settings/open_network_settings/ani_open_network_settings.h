@@ -20,6 +20,9 @@
 #include "ability.h"
 #include "ani.h"
 #include "ui_extension_context.h"
+#ifdef SETTINGS_SUPPORT_IMF
+#include "inputmethod_extension_context.h"
+#endif
 #include "napi_settings_log.h"
 #include "api_open_settings_page_util.h"
 #include "napi_sys_event_util.h"
@@ -37,6 +40,9 @@ enum SettingsCode {
 struct BaseContext {
     std::shared_ptr<OHOS::AbilityRuntime::AbilityContext> abilityContext = nullptr;
     std::shared_ptr<OHOS::AbilityRuntime::UIExtensionContext> uiExtensionContext = nullptr;
+    #ifdef SETTINGS_SUPPORT_IMF
+    std::shared_ptr<OHOS::AbilityRuntime::InputMethodExtensionContext> inputMethodExtensionContext = nullptr;
+    #endif
 };
 
 struct SettingsError {
@@ -69,6 +75,10 @@ private:
 bool ParseAbilityContext(ani_env *env, const ani_object &obj,
     std::shared_ptr<OHOS::AbilityRuntime::AbilityContext> &abilityContext,
     std::shared_ptr<OHOS::AbilityRuntime::UIExtensionContext> &uiExtensionContext);
+#ifdef SETTINGS_SUPPORT_IMF
+bool ParseAbilityContext(ani_env *env, const ani_object &obj,
+    std::shared_ptr<BaseContext> &loadProductContext);
+#endif
 OHOS::Ace::UIContent* GetUIContent(std::shared_ptr<BaseContext> &asyncContext);
 ani_boolean opne_manager_settings(ani_env *env, ani_object context);
 void openInputMethodSettings(ani_env *env, ani_object context);
