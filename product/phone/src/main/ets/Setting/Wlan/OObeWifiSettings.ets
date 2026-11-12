@@ -109,19 +109,17 @@ export struct OObeWifiSettings {
   buttonBuilder(): void {
     Column() {
       Column() {
-        Button((this.isNetworkConnected && !this.isWifiConnected) ? $r('app.string.skip_process') :
-        $r('app.string.continue_process'), {
+        // 底部按钮默认固定显示「跳过」，且始终可点击跳转下一页
+        Button($r('app.string.skip_process'), {
           type: ButtonType.Capsule,
-          stateEffect: (this.isNetworkConnected || this.isPortalUnauthenticated)
+          stateEffect: true
         })
-          .backgroundColor(this.isNetworkConnected || (!this.isFastCloneScene && this.isWifiConnected) ? $r('app.color.0A59F7') : $r('app.color.317aff'))
-          .enabled(this.isNetworkConnected || (!this.isFastCloneScene && this.isWifiConnected))
+          .backgroundColor($r('app.color.0A59F7'))
+          .enabled(true)
           .width('100%')
           .onClick(() => {
-            LogUtil.info(`${TAG} isFastCloneScene ${this.isFastCloneScene}, iswificonnected ${this.isWifiConnected}`);
-            if (this.isNetworkConnected || (!this.isFastCloneScene && this.isWifiConnected)) {
-              this.onNextBtnClick();
-            }
+            LogUtil.info(`${TAG}  skip always enabled click`);
+            this.onNextBtnClick();
           });
       }
       .width(this.footBtnWidth)
