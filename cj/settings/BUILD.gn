@@ -22,7 +22,7 @@ ohos_shared_library("cj_settings_ffi") {
     "src/settings_ffi.cpp",
   ]
 
-  deps = []
+  deps = [ "../../native/settings:settings_common" ]
 
   version_script = "libcj_settings_ffi.map"
 
