@@ -149,6 +149,23 @@ export class DeviceNameUtil {
     }
   }
 
+  /**
+   * 设置本机名称，同步到分布式设备列表
+   * @param deviceName 设备名称
+   * @return 设置成功返回true
+   */
+  static async setDeviceName(deviceName: string): Promise<boolean> {
+    let result: boolean = true;
+    try {
+      LogUtil.showInfo(TAG, `setDeviceName: ${deviceName}`);
+      await DeviceNameUtil.getDeviceManager()?.setLocalDeviceName(deviceName);
+    } catch (err) {
+      result = false;
+      LogUtil.error(`${TAG} setDeviceName fail: errCode ${err?.code}, errMessage ${err?.message}`);
+    }
+    return result;
+  }
+
   /* instrument ignore next */
   static async initDeviceName(): Promise<void> {
     let getInitStateTask: taskpool.Task =
@@ -164,25 +181,29 @@ export class DeviceNameUtil {
     SettingsDataUtils.setSettingsDataAsync(INIT_DEVICE_NAME_STATE, 'true');
   }
 
-  static  getDeviceNameAsync(): string{
+  static getDeviceNameAsync(): string {
     const context: Context = ContextUtils.getContext()
     const deviceName = settings.getValueSync(context, settings.general.DEVICE_NAME,'');
-    return deviceName
+    return deviceName;
   }
 
   static async setDisplayDeviceNameAsync(deviceName: string): Promise<boolean> {
     LogUtil.info(`${TAG} setDisplayDeviceNameAsync ${LogMaskUtil.getLogNickNameString(deviceName)}`);
     let result: boolean = true;
-    const context: Context = ContextUtils.getContext()
-    const dev = settings.getValueSync(context, settings.general.DEVICE_NAME,'');
+    const context: Context = ContextUtils.getContext();
     try {
-      settings.setValueSync(context, settings.general.DEVICE_NAME, deviceName);
+      const dev = settings.setValueSync(context, settings.general.DEVICE_NAME, deviceName);
       if (!dev) {
         let resource = CHECK_FAIL_CODE.has(DeviceNameCheckErrCode.ERROR_CODE_RISK_CHECK_FAIL) ?
           $r('app.string.device_name_check_fail') : $r('app.string.device_name_update_fail');
         ToastUtil.showToast(ResourceUtil.getStringSync(resource), ToastUtil.SHORT_DURATION);
         LogUtil.error(`${TAG} set local device name fail: errCode :, errMessage `);
         result = false;
+      }
+      if (result) {
+        DeviceNameUtil.setDeviceName(deviceName).then(() => {
+          DeviceNameUtil.releaseDeviceManager();
+        });
       }
     } catch (err) {
       LogUtil.error(`${TAG} getDeviceManager fail: errCode ${err?.code}, errMessage ${err?.message}`);
