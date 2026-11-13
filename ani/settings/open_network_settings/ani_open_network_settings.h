@@ -77,7 +77,7 @@ bool ParseAbilityContext(ani_env *env, const ani_object &obj,
     std::shared_ptr<OHOS::AbilityRuntime::UIExtensionContext> &uiExtensionContext);
 #ifdef SETTINGS_SUPPORT_IMF
 bool ParseAbilityContext(ani_env *env, const ani_object &obj,
-    std::shared_ptr<BaseContext> &loadProductContext);
+    std::shared_ptr<BaseContext> &loadProductContext, const std::string &targetPage);
 #endif
 OHOS::Ace::UIContent* GetUIContent(std::shared_ptr<BaseContext> &asyncContext);
 ani_boolean opne_manager_settings(ani_env *env, ani_object context);

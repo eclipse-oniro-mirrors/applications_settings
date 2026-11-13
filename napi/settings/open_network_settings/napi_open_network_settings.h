@@ -77,7 +77,7 @@ bool ParseAbilityContext(napi_env env, const napi_value &obj,
     std::shared_ptr<OHOS::AbilityRuntime::UIExtensionContext> &uiExtensionContext);
 #ifdef SETTINGS_SUPPORT_IMF
 bool ParseAbilityContext(napi_env env, const napi_value &obj,
-    std::shared_ptr<BaseContext> &loadProductContext);
+    std::shared_ptr<BaseContext> &loadProductContext, const std::string &targetPage);
 #endif
 OHOS::Ace::UIContent* GetUIContent(std::shared_ptr<BaseContext> &asyncContext);
 napi_value opne_manager_settings(napi_env env, napi_callback_info info);

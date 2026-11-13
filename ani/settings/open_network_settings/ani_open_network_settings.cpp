@@ -351,7 +351,8 @@ bool ParseAbilityContext(ani_env *env, const ani_object &obj,
     return context != nullptr && (abilityContext != nullptr || uiExtensionContext != nullptr);
 }
 
-bool ParseAbilityContext(ani_env *env, const ani_object &obj, std::shared_ptr<BaseContext> &loadProductContext)
+bool ParseAbilityContext(ani_env *env, const ani_object &obj, std::shared_ptr<BaseContext> &loadProductContext,
+                         const std::string &targetPage)
 {
     auto context = ParseStageContext(env, obj, loadProductContext->abilityContext,
                                      loadProductContext->uiExtensionContext);
@@ -364,13 +365,16 @@ bool ParseAbilityContext(ani_env *env, const ani_object &obj, std::shared_ptr<Ba
         return true;
     }
 #ifdef SETTINGS_SUPPORT_IMF
-    loadProductContext->inputMethodExtensionContext =
-        OHOS::AbilityRuntime::Context::ConvertTo<OHOS::AbilityRuntime::InputMethodExtensionContext>(context);
-    if (loadProductContext->inputMethodExtensionContext == nullptr) {
-        SETTING_LOG_ERROR("get InputMethodExtensionContext success");
-        return false;
+    SETTING_LOG_INFO("get InputMethodExtensionContext");
+    if (targetPage == SettingsPageUrl::INPUT_DETAIL_PAGE) {
+        loadProductContext->inputMethodExtensionContext =
+            OHOS::AbilityRuntime::Context::ConvertTo<OHOS::AbilityRuntime::InputMethodExtensionContext>(context);
+        if (loadProductContext->inputMethodExtensionContext == nullptr) {
+            SETTING_LOG_ERROR("get InputMethodExtensionContext failed");
+            return false;
+        }
+        return true;
     }
-    return true;
 #endif
     return false;
 }
@@ -439,7 +443,7 @@ void StartUiExtensionWithParams(ani_env *env, const ani_object &context, OHOS::A
 {
     auto loadProductContext = std::make_shared<BaseContext>();
     const std::string targetPage = request.GetUriString();
-    if (!ParseAbilityContext(env, context, loadProductContext)) {
+    if (!ParseAbilityContext(env, context, loadProductContext, targetPage)) {
         SETTING_LOG_ERROR("context parse error.");
         ThrowParamErrorException(env, targetPage);
         return;
