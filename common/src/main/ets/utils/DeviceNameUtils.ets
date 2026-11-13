@@ -150,7 +150,7 @@ export class DeviceNameUtil {
   }
 
   /**
-   * 设置本机名称，同步到分布式设备列表 gq3LjP5iutgsncy33MVPzvc8
+   * 设置本机名称，同步到分布式设备列表
    * @param deviceName 设备名称
    * @return 设置成功返回true
    */
