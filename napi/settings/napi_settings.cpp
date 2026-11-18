@@ -430,8 +430,8 @@ std::shared_ptr<DataShareHelper> getNoSilentDataShareHelper(napi_env env, AsyncC
 {
     std::shared_ptr<OHOS::DataShare::DataShareHelper> dataShareHelper = nullptr;
     std::string strUri = "datashare:///com.ohos.settingsdata.DataAbility";
-    dataShareHelper = OHOS::DataShare::DataShareHelper::Creator(asyncCallbackInfo->token, strUri, "");
     if (asyncCallbackInfo) {
+        dataShareHelper = OHOS::DataShare::DataShareHelper::Creator(asyncCallbackInfo->token, strUri, "");
         asyncCallbackInfo->useNonSilent = true;
     }
     if (dataShareHelper == nullptr) {
