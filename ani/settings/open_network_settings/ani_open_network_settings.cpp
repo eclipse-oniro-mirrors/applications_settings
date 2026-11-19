@@ -16,6 +16,9 @@
 #include "ani_open_network_settings.h"
 #include "../ani_settings.h"
 #include "ani_base_context.h"
+#ifdef SETTINGS_SUPPORT_IMF
+#include "inputmethod_extension_context.h"
+#endif
 #include "ui_content.h"
 #include <json/json.h>
 #include "parameters.h"
@@ -183,7 +186,11 @@ bool StartUiExtensionAbility(OHOS::AAFwk::Want &request, std::shared_ptr<BaseCon
         return false;
     }
 
-    if (asyncContext->abilityContext == nullptr && asyncContext->uiExtensionContext == nullptr) {
+    if (asyncContext->abilityContext == nullptr && asyncContext->uiExtensionContext == nullptr
+    #ifdef SETTINGS_SUPPORT_IMF
+        && asyncContext->inputMethodExtensionContext == nullptr
+    #endif
+    ) {
         SETTING_LOG_ERROR("abilityContext is nullptr");
         return false;
     }
@@ -225,7 +232,13 @@ OHOS::Ace::UIContent* GetUIContent(std::shared_ptr<BaseContext> &asyncContext)
         SETTING_LOG_INFO("get uiContext by ui extension ability context");
         uiContent = asyncContext->uiExtensionContext->GetUIContent();
     } else {
-        SETTING_LOG_ERROR("get uiContext failed.");
+        #ifdef SETTINGS_SUPPORT_IMF
+        if (asyncContext->inputMethodExtensionContext != nullptr) {
+            SETTING_LOG_INFO("get uiContext by inputMethodExtensionContext ability context");
+            uiContent = asyncContext->inputMethodExtensionContext->GetUIContent();
+            asyncContext->inputMethodExtensionContext->NotifyImeModalWindowStateChanged(SETTINGS_PACKAGE_NAME, 0);
+        }
+        #endif
     }
 
     return uiContent;
@@ -266,7 +279,13 @@ void ModalUICallback::SetSessionId(int32_t sessionId)
 
 void ModalUICallback::OnRelease(int32_t releaseCode)
 {
+#ifdef SETTINGS_SUPPORT_IMF
     SETTING_LOG_INFO("OnRelease");
+    if (this->baseContext != nullptr && this->baseContext->inputMethodExtensionContext != nullptr) {
+        SETTING_LOG_INFO("NotifyImeModalWindowStateChanged close");
+        this->baseContext->inputMethodExtensionContext->NotifyImeModalWindowStateChanged(SETTINGS_PACKAGE_NAME, 1);
+    }
+#endif
     this->CloseModalUI();
 }
 
@@ -282,40 +301,82 @@ void ModalUICallback::OnReceive(const OHOS::AAFwk::WantParams &request)
 
 void ModalUICallback::OnError(int32_t code, const std::string &name, const std::string &message)
 {
+#ifdef SETTINGS_SUPPORT_IMF
+    if (this->baseContext != nullptr && this->baseContext->inputMethodExtensionContext != nullptr) {
+        SETTING_LOG_INFO("NotifyImeModalWindowStateChanged close");
+        this->baseContext->inputMethodExtensionContext->NotifyImeModalWindowStateChanged(SETTINGS_PACKAGE_NAME, 1);
+    }
+#endif
     SETTING_LOG_INFO("ModalUICallback::OnError %{public}s", message.c_str());
+}
+
+static std::shared_ptr<OHOS::AbilityRuntime::Context> ParseStageContext(ani_env *env, const ani_object &obj,
+    std::shared_ptr<OHOS::AbilityRuntime::AbilityContext> &abilityContext,
+    std::shared_ptr<OHOS::AbilityRuntime::UIExtensionContext> &uiExtensionContext)
+{
+    SETTING_LOG_INFO("begin ParseStageContext");
+    ani_boolean stageMode = false;
+    ani_status status = OHOS::AbilityRuntime::IsStageContext(env, obj, stageMode);
+    if (status != ANI_OK || !stageMode) {
+        SETTING_LOG_ERROR("it is not a stage mode");
+        return nullptr;
+    }
+
+    auto context = OHOS::AbilityRuntime::GetStageModeContext(env, obj);
+    if (context == nullptr) {
+        SETTING_LOG_ERROR("get context failed");
+        return nullptr;
+    }
+
+    abilityContext = OHOS::AbilityRuntime::Context::ConvertTo<OHOS::AbilityRuntime::AbilityContext>(context);
+    if (abilityContext != nullptr) {
+        return context;
+    }
+    SETTING_LOG_ERROR("get stage model ability context failed");
+
+    uiExtensionContext = OHOS::AbilityRuntime::Context::ConvertTo<OHOS::AbilityRuntime::UIExtensionContext>(context);
+    if (uiExtensionContext != nullptr) {
+        SETTING_LOG_INFO("get uiExtensionContext success");
+        return context;
+    }
+
+    return context;
 }
 
 bool ParseAbilityContext(ani_env *env, const ani_object &obj,
     std::shared_ptr<OHOS::AbilityRuntime::AbilityContext> &abilityContext,
     std::shared_ptr<OHOS::AbilityRuntime::UIExtensionContext> &uiExtensionContext)
 {
-    SETTING_LOG_INFO("begin ParseAbilityContextReq");
-    ani_boolean stageMode = false;
-    ani_status status = OHOS::AbilityRuntime::IsStageContext(env, obj, stageMode);
-    if (status != ANI_OK || !stageMode) {
-        SETTING_LOG_ERROR("it is not a stage mode");
-        return false;
-    }
+    auto context = ParseStageContext(env, obj, abilityContext, uiExtensionContext);
+    return context != nullptr && (abilityContext != nullptr || uiExtensionContext != nullptr);
+}
 
-    auto context = OHOS::AbilityRuntime::GetStageModeContext(env, obj);
+bool ParseAbilityContext(ani_env *env, const ani_object &obj, std::shared_ptr<BaseContext> &loadProductContext,
+                         const std::string &targetPage)
+{
+    auto context = ParseStageContext(env, obj, loadProductContext->abilityContext,
+                                     loadProductContext->uiExtensionContext);
     if (context == nullptr) {
-        SETTING_LOG_ERROR("get context failed");
+        SETTING_LOG_ERROR("ParseAbilityContext failed");
         return false;
     }
-
-    abilityContext = OHOS::AbilityRuntime::Context::ConvertTo<OHOS::AbilityRuntime::AbilityContext>(context);
-    if (abilityContext != nullptr) {
+    if (loadProductContext->abilityContext != nullptr || loadProductContext->uiExtensionContext != nullptr) {
+        SETTING_LOG_INFO("get ParseAbilityContext success");
         return true;
     }
-    SETTING_LOG_ERROR("get stage model ability context failed");
-
-    uiExtensionContext = OHOS::AbilityRuntime::Context::ConvertTo<OHOS::AbilityRuntime::UIExtensionContext>(context);
-    if (uiExtensionContext == nullptr) {
-        SETTING_LOG_ERROR("get uiExtensionContext failed");
-        return false;
+#ifdef SETTINGS_SUPPORT_IMF
+    SETTING_LOG_INFO("get InputMethodExtensionContext");
+    if (targetPage == SettingsPageUrl::INPUT_DETAIL_PAGE) {
+        loadProductContext->inputMethodExtensionContext =
+            OHOS::AbilityRuntime::Context::ConvertTo<OHOS::AbilityRuntime::InputMethodExtensionContext>(context);
+        if (loadProductContext->inputMethodExtensionContext == nullptr) {
+            SETTING_LOG_ERROR("get InputMethodExtensionContext failed");
+            return false;
+        }
+        return true;
     }
-
-    return true;
+#endif
+    return false;
 }
 
 SettingsError ReadErrorMessage(int code)
@@ -382,8 +443,7 @@ void StartUiExtensionWithParams(ani_env *env, const ani_object &context, OHOS::A
 {
     auto loadProductContext = std::make_shared<BaseContext>();
     const std::string targetPage = request.GetUriString();
-    if (!ParseAbilityContext(env, context,
-        loadProductContext->abilityContext, loadProductContext->uiExtensionContext)) {
+    if (!ParseAbilityContext(env, context, loadProductContext, targetPage)) {
         SETTING_LOG_ERROR("context parse error.");
         ThrowParamErrorException(env, targetPage);
         return;
