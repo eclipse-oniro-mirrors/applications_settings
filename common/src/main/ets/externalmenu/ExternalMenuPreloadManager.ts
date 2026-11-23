@@ -67,6 +67,13 @@ export class ExternalMenuPreloadManager {
       'uiExtensionType': 'sys/commonUI'
     },
     {
+      'bundleName': 'com.ohos.settings',
+      'moduleName': 'phone',
+      'abilityName': 'IntelligentSceneAppSelectExtensionAbility',
+      'entryKey': ['intelligent_scene_app_select'],
+      'uiExtensionType': 'sys/commonUI'
+    },
+    {
       'bundleName': 'com.ohos.sceneboard',
       'moduleName': '',
       'abilityName': 'SettingThemeComponentExtAbility',

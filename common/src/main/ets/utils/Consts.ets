@@ -274,6 +274,7 @@ export enum NavEntryKey {
   UNIVERSAL_DRAG_ENTRY = 'universal_drag',
   // 情景模式
   INTELLIGENT_SCENE_SETTINGS_ENTRY = 'intelligent_scene_entry',
+  INTELLIGENT_SCENE_APP_SELECT = 'intelligent_scene_app_select',
   // 推荐建议
   HOMEPAGE_SUGGESTION_MORE_PAGE = 'homepage_suggestion_more_page',
   // 额外输入法设置，点小艺输入法进入
