@@ -14,6 +14,7 @@
  */
 
 import { sensor } from '@kit.SensorServiceKit';
+import CommonEventManager from '@ohos.commonEventManager';
 import { DeviceUtil } from '@ohos/settings.common/src/main/ets/utils/BaseUtils';
 import { CapabilitySupportUtils } from '@ohos/settings.common/src/main/ets/utils/CapabilitySupportUtils';
 import { SearchDataController } from '@ohos/settings.search/src/main/ets/controller/SearchController';
@@ -59,6 +60,8 @@ export class SearchItemDynamicUpdateUtil {
     'Display the desktop', 'Go into multitasking', 'three finger slide up', 'three fingers up and stay',
     'attration_style'
   ];
+  private simStateSubscriber?: CommonEventManager.CommonEventSubscriber;
+  private isSimStateRegistered: boolean = false;
 
   public static getInstance(): SearchItemDynamicUpdateUtil {
     if (!SearchItemDynamicUpdateUtil.instance) {
@@ -78,6 +81,38 @@ export class SearchItemDynamicUpdateUtil {
     this.updateSearchItemsOfScreenReaderOptionIn2In1();
     // 情景模式：与首页入口 CCM 对齐，避免入库 enable 与入口开关不一致导致搜不到
     this.updateSearchItemsOfIntelligentScene();
+  }
+
+  /**
+   * 按当前插卡刷新「SIM 卡应用程序」搜索项：有卡才显示对应槽位入口
+   */
+  public updateSearchItemsOfSimApplication(): void {
+    this.registerSimStateChange();
+    this.applySimApplicationSearchItems();
+  }
+
+  private applySimApplicationSearchItems(): void {
+    this.updateSearchItem('sim_application_1', SearchCheckUtil.hasSimCardApplicationSlotOne());
+    this.updateSearchItem('sim_application_2', SearchCheckUtil.hasSimCardApplicationSlotTwo());
+    this.updateSearchItem('sim_card_application', SearchCheckUtil.hasSimCardApplicationSingle());
+  }
+
+  private registerSimStateChange(): void {
+    if (this.isSimStateRegistered) {
+      return;
+    }
+    this.isSimStateRegistered = true;
+    CommonEventManager.createSubscriber({
+      events: [CommonEventManager.Support.COMMON_EVENT_SIM_STATE_CHANGED]
+    }).then((subscriber: CommonEventManager.CommonEventSubscriber) => {
+      this.simStateSubscriber = subscriber;
+      return CommonEventManager.subscribe(subscriber, () => {
+        this.applySimApplicationSearchItems();
+      });
+    }).catch((err: Error) => {
+      this.isSimStateRegistered = false;
+      LogUtil.showError(TAG, `registerSimStateChange error: ${err?.message}`);
+    });
   }
 
   /**

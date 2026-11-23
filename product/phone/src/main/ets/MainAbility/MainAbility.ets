@@ -44,6 +44,7 @@ import { hasOwnPropertyCall } from '@ohos/settings.common/src/main/ets/utils/Obj
 import { CheckEmptyUtils } from '@ohos/settings.common/src/main/ets/utils/CheckEmptyUtils';
 import { WindowManager } from '@ohos/settings.common/src/main/ets/window/WindowManager';
 import { SearchDataController } from '@ohos/settings.search/src/main/ets/controller/SearchController';
+import { SearchItemDynamicUpdateUtil } from '../Setting/Home/utils/SearchItemDynamicUpdateUtil';
 import { SettingPageDescController } from '@ohos/settings.search/src/main/ets/controller/SettingPageDescController';
 import {
   HiSysEventUtil,
@@ -220,7 +221,9 @@ export default class MainAbility extends Ability {
     SettingPageDescController.initPageInfoTable();
     SettingPageDescController.deletePageInfoData();
     setTimeout(() => {
-      SearchDataController.initSearchData();
+      SearchDataController.initSearchData().then(() => {
+        SearchItemDynamicUpdateUtil.getInstance().updateSearchItemsOfSimApplication();
+      });
       SettingPageDescController.initPageInfoData();
       SearchDataController.getInstance().registerStatusChange();
       SearchDataController.getInstance().updateRemovableBundles();
