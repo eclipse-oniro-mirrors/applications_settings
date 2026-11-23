@@ -25,6 +25,8 @@ import { ExitAbnormallyComponent } from '@ohos/settings.common/src/main/ets/view
 const TAG: string = 'SOSEmergencyHelpSettings: ';
 const BUNDLE_NAME: string = 'com.ohos.emergencycommunication';
 const ABILITY_NAME: string = 'com.ohos.emergencycommunication.SosHelpAbility';
+const SUB_PAGE_ENTRY_KEY: string = 'sub_page_entry_key';
+const SOS_MAIN_PAGE_ENTRY: string = 'sos_emergency_help_main';
 
 @Builder
 export function settingSOSEmergencyHelpBuilder(param: object): void {
@@ -51,6 +53,7 @@ export struct SOSEmergencyHelpSettings {
   @StorageProp('navigationMode')
   @Watch('onNavigationModeChange') navigationMode: NavigationMode = NavigationMode.Stack;
   @State observedData: ObservedData = new ObservedData();
+  @State isInMainPage: boolean = true;
   private viewModel: UiExtensionViewModel = new UiExtensionViewModel(this.observedData);
 
   recoverController: CustomDialogController = new CustomDialogController({
@@ -72,6 +75,7 @@ export struct SOSEmergencyHelpSettings {
           'reconnect': this.observedData.reconnect,
         }
       })
+        .defaultFocus(true)
         .onRemoteReady((proxy) => {
           LogUtil.info(`${TAG} onRemoteReady navigationMode: ${this.navigationMode}`);
           this.uiExtensionProxy = proxy;
@@ -89,9 +93,13 @@ export struct SOSEmergencyHelpSettings {
           LogUtil.info(`${TAG} UIExtensionComponent onRealse ${number}`);
         })
         .onReceive((data) => {
-          LogUtil.info(`${TAG} UIExtensionComponent onReceive, pop`);
-          // 新增：处理返回逻辑
-          if (data && data.action === 'pop' || data?.reason === 'back') {
+          LogUtil.info(`${TAG} UIExtensionComponent onReceive`);
+          if (data && data[SUB_PAGE_ENTRY_KEY]) {
+            const subPage: string = String(data[SUB_PAGE_ENTRY_KEY]);
+            LogUtil.info(`${TAG} sub_page_entry_key is ${subPage}`);
+            this.isInMainPage = subPage === SOS_MAIN_PAGE_ENTRY;
+          }
+          if (data && (data.action === 'pop' || data?.reason === 'back')) {
             LogUtil.info(`${TAG} Received back command from remote UI, triggering pop.`);
             this.handleBackAction();
           }
@@ -106,6 +114,14 @@ export struct SOSEmergencyHelpSettings {
     })
     .onHidden(() => {
       LogUtil.info(`${TAG} NavDestination onHidden`)
+    })
+    .onBackPressed(() => {
+      if (!this.isInMainPage) {
+        LogUtil.info(`${TAG} onBackPressed forward to extension`);
+        this.uiExtensionProxy?.send({ 'action': 'back' });
+        return true;
+      }
+      return false;
     })
   }
 
