@@ -1080,7 +1080,8 @@
           "itemName": "font_theme",
           "itemTitle": "$string:font_style_theme",
           "itemDescription": "",
-          "icon": "$media:ic_public_themes"
+          "icon": "$media:ic_public_themes",
+          "enable": "false"
         }
       ]
     },
@@ -1154,18 +1155,13 @@
           "itemTitle": "$string:screenlock_font_creation_service",
           "itemDescription": "",
           "icon": "",
-          "enable": "true",
+          "enable": "false",
           "childItems": "",
           "alias": "锁屏|鎖屏|字体创作|lock screen|suoping|服务|锁屏字体创作服务|zitichuangzuo|font creation service",
           "supportDevices": [
             "phone",
             "tablet"
-          ],
-          "checkItem": {
-            "type": "function",
-            "checkKey": "isSmallFoldProduct",
-            "value": "false"
-          }
+          ]
         }
       ]
     },

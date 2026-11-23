@@ -201,7 +201,7 @@
     {
       "entryKey": "theme_font",
       "parentKey": "theme_settings",
-      "isVisible": true,
+      "isVisible": false,
       "permission": ""
     },
     {
