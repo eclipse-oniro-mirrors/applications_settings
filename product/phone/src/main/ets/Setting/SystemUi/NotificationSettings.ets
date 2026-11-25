@@ -29,6 +29,7 @@ import { CheckEmptyUtils } from '@ohos/settings.common/src/main/ets/utils/CheckE
 import { AppListLoader } from '@ohos/settings.application/src/main/ets/AppListLoader';
 import { ContainerAppPushConfig } from '@ohos/settings.application/src/main/ets/model/ContainerAppPushConfig';
 import { UIExtensionSessionUtils } from '@ohos/settings.common/src/main/ets/utils/UIExtensionSessionUtils';
+import { NavEntryKey } from '@ohos/settings.common/src/main/ets/utils/Consts';
 
 const TAG: string = 'NotificationSettings : ';
 const BUNDLE_NAME: string = 'com.ohos.sceneboard';
@@ -63,11 +64,11 @@ export struct NotificationSettings {
       UIExtensionComponent(this.getWant(), { dpiFollowStrategy: DpiFollowStrategy.FOLLOW_HOST_DPI })
         .defaultFocus(true)
         .onRemoteReady((proxy) => {
-          LogUtil.info(`${TAG} onRemoteReady navigationMode: ${this.navigationMode}`);
+          LogUtil.info(`${TAG} onRemoteReady navigationMode: ${this.navigationMode}, hideBackButton: ${this.shouldHideBackButton()}`);
           this.uiExtensionProxy = proxy;
-          this.uiExtensionProxy?.send({ 'navigationMode': this.navigationMode });
+          this.sendNavigationState();
           this.uiExtensionProxy?.on('syncReceiverRegister', () => {
-            this.uiExtensionProxy?.send({ 'navigationMode': this.navigationMode });
+            this.sendNavigationState();
           });
           UIExtensionSessionUtils.sendTitleAnimationDuration(this.uiExtensionProxy, this.startTime);
           this.uiExtensionProxy?.on('asyncReceiverRegister', () => {
@@ -89,6 +90,8 @@ export struct NotificationSettings {
     .backgroundColor($r('sys.color.ohos_id_color_sub_background'))
     .onShown(() => {
       LogUtil.info(`${TAG} NavDestination onShown ${JSON.stringify(this.getWant())}`);
+      // 分栏进出详情栈后刷新返回键显隐
+      this.sendNavigationState();
       // delay start page transition animation
       if (this.navigationMode === NavigationMode.Stack) {
         this.viewModel.delayTransition();
@@ -107,6 +110,8 @@ export struct NotificationSettings {
   }
 
   private getWant(): Want {
+    const hideBackButton: boolean = this.shouldHideBackButton();
+    const extensionNavMode: NavigationMode = this.getExtensionNavigationMode();
     if (AppListLoader.getInstance()
       .getAppType(AppListLoader.getInstance().getAppEntry(this.params?.bundleName ?? '') ?? null) === 'meetaApp') {
       const param : PushParam = new PushParam({
@@ -120,7 +125,8 @@ export struct NotificationSettings {
         abilityName: ABILITY_NAME,
         parameters: {
           'ability.want.params.uiExtensionType': 'sys/commonUI',
-          'navigationMode': this.firstNavigationMode,
+          'navigationMode': extensionNavMode,
+          'hideBackButton': hideBackButton,
           'pushParams': param,
           'startReason': this.params?.startReason ?? PageStartModeManager.getInstance().getStartReason(),
           'reconnect': this.observedData.reconnect,
@@ -132,7 +138,8 @@ export struct NotificationSettings {
       abilityName: ABILITY_NAME,
       parameters: {
         'ability.want.params.uiExtensionType': 'sys/commonUI',
-        'navigationMode': this.firstNavigationMode,
+        'navigationMode': extensionNavMode,
+        'hideBackButton': hideBackButton,
         'pushParams': (this.params?.config || this.params?.subUri || this.params?.bundleName) as string,
         'startReason': this.params?.startReason ?? PageStartModeManager.getInstance().getStartReason(),
         'reconnect': this.observedData.reconnect,
@@ -140,15 +147,66 @@ export struct NotificationSettings {
     } as Want;
   }
 
+  /**
+   * SceneBoard NotificationMgmt 的 IsHideBackButton 只认 navigationMode===Split，
+   * 不消费 hideBackButton。详情页需上报 Stack，扩展侧才会画返回键。
+   */
+  private getExtensionNavigationMode(): NavigationMode {
+    if (this.isAppNotificationDetail()) {
+      return NavigationMode.Stack;
+    }
+    return this.navigationMode;
+  }
+
+  /**
+   * Pad 分栏一级页隐藏返回；通知管理详情（或栈深>1）必须显示返回键。
+   */
+  private shouldHideBackButton(): boolean {
+    if (this.navigationMode !== NavigationMode.Split) {
+      return false;
+    }
+    if (this.isAppNotificationDetail()) {
+      return false;
+    }
+    return (this.pathInfos?.size() ?? 0) <= 1;
+  }
+
+  private isAppNotificationDetail(): boolean {
+    const pathNames: string[] = this.pathInfos?.getAllPathName() ?? [];
+    if (pathNames.length > 0 &&
+      pathNames[pathNames.length - 1] === NavEntryKey.NOTIFICATION_SETTINGS_DETAIL_ENTRY) {
+      return true;
+    }
+    if (this.params?.bundleName) {
+      return true;
+    }
+    const config: Object | string | undefined = this.params?.config as Object | string | undefined;
+    if (config !== undefined && typeof config === 'object' &&
+      (config as Record<string, Object>)['bundleName'] !== undefined) {
+      return true;
+    }
+    return false;
+  }
+
+  private sendNavigationState(): void {
+    const hideBackButton: boolean = this.shouldHideBackButton();
+    const extensionNavMode: NavigationMode = this.getExtensionNavigationMode();
+    LogUtil.info(`${TAG} sendNavigationState hostMode: ${this.navigationMode}, ` +
+      `extensionMode: ${extensionNavMode}, hideBackButton: ${hideBackButton}`);
+    this.uiExtensionProxy?.send({
+      'navigationMode': extensionNavMode,
+      'hideBackButton': hideBackButton,
+    });
+  }
+
   onNavigationModeChange(): void {
     LogUtil.info(`${TAG} onNavigationModeChange navigationMode: ${this.navigationMode}`);
-    this.uiExtensionProxy?.send({ 'navigationMode': this.navigationMode });
+    this.sendNavigationState();
   }
 
   async aboutToAppear(): Promise<void> {
     LogUtil.info(`${TAG} aboutToAppear`);
     this.startTime = new Date().getTime();
-    this.firstNavigationMode = this.navigationMode;
     let appIndex: number = await this.getAppIndexInCaller();
     let param = (this.params as PageParams)?.param;
     if (!(this.params)?.config && param) {
@@ -167,6 +225,10 @@ export struct NotificationSettings {
         this.params.config = config;
       }
     }
+    // params 归一化后再决定上报给扩展的 navigationMode
+    this.firstNavigationMode = this.getExtensionNavigationMode();
+    LogUtil.info(`${TAG} aboutToAppear hostMode: ${this.navigationMode}, ` +
+      `extensionMode: ${this.firstNavigationMode}, isDetail: ${this.isAppNotificationDetail()}`);
     this.viewModel.listening(this.recoverController);
     HiSysEventUtil.reportDefaultBehaviorEventByUE(HiSysSettingHomeEventGroup.ENTER_SYSTEM_NOTIFICATION);
   }
