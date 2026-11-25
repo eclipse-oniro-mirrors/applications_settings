@@ -2056,12 +2056,7 @@
           "icon": "",
           "enable": "true",
           "childItems": "",
-          "alias": "振动|声音|震动|按键|触摸时振动|点击振动|触摸振动|触感反馈|导航振动|导航触摸反馈|解锁时振动|滑动反馈|滑动振动|振动反馈|点击时振动|系统振动反馈|System haptics|xitongchuganfankui",
-          "checkItem": {
-            "type": "param",
-            "checkKey": "const.vibrator.support_vibrator",
-            "value": "true"
-          }
+          "alias": "振动|声音|震动|按键|触摸时振动|点击振动|触摸振动|触感|触感反馈|系统触感反馈|导航振动|导航触摸反馈|解锁时振动|滑动反馈|滑动振动|振动反馈|点击时振动|系统振动反馈|System haptics|xitongchuganfankui"
         },
         {
           "itemName": "volume_key_control_message",
