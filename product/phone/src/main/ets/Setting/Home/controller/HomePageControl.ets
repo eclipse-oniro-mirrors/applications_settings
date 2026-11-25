@@ -63,6 +63,7 @@ export class HomePageControl implements ComponentControl {
     if (DeviceUtil.isDevicePad()) {
       this.initKeyboardConnectStatusChangeCallback();
     }
+    SearchItemDynamicUpdateUtil.getInstance().updateSearchItemsOfSimApplication();
     if (DeviceUtil.is2In1Device()) {
       SearchItemDynamicUpdateUtil.getInstance().updateSearchItems();
     }
