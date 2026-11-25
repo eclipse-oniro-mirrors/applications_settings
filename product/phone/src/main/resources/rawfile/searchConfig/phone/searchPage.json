@@ -1545,15 +1545,6 @@
           }
         },
         {
-          "itemName": "screenshot_prompt_tone",
-          "itemTitle": "$string:screenshot_prompt_tone",
-          "itemDescription": "",
-          "icon": "",
-          "enable": "true",
-          "childItems": "",
-          "alias": "截屏音效|截屏声|Screenshot|jiepingtishiyin"
-        },
-        {
           "itemName": "dial_tone",
           "itemTitle": "$string:dial_Tone",
           "itemDescription": "",
@@ -1922,15 +1913,6 @@
           "enable": "",
           "childItems": "",
           "alias": ""
-        },
-        {
-          "itemName": "screen_on_time_today",
-          "itemTitle": "$string:screen_on_time_today",
-          "itemDescription": "",
-          "icon": "",
-          "enable": "true",
-          "childItems": "",
-          "alias": "亮屏时间|用了多久"
         },
         {
           "itemName": "application_power_percent",
