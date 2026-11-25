@@ -42,7 +42,7 @@ import { DynamicLoader } from '@ohos/settings.common/src/main/ets/utils/DynamicL
 import { DeviceUtil } from '@ohos/settings.common/src/main/ets/utils/BaseUtils';
 import { PackagesConstant } from '@ohos/settings.common/src/main/ets/constant/PackagesConstant';
 import { CheckEmptyUtils } from '@ohos/settings.common/src/main/ets/utils/CheckEmptyUtils';
-import { WindowManager } from '@ohos/settings.common/src/main/ets/window/WindowManager';
+import { WindowManager, FLOAT_TOP_AVOID_KEY } from '@ohos/settings.common/src/main/ets/window/WindowManager';
 import { StringUtil } from '@ohos/settings.common/src/main/ets/utils/StringUtil';
 import { AbilityUtils } from '@ohos/settings.common/src/main/ets/utils/AbilityUtils';
 import { PageStartModeManager } from '@ohos/settings.common/src/main/ets/window/PageStartModeManager';
@@ -198,6 +198,7 @@ struct SettingsHome {
   @StorageProp('navigationUrl') internalNavigationUrl: string = '';
   @Provide('pathInfos') pathInfos: NavPathStack = new NavPathStack();
   @StorageProp('isSearching') @Watch('handleSearchChange') isSearching: boolean = false;
+  @StorageProp(FLOAT_TOP_AVOID_KEY) floatTopAvoid: number = 0;
   @State currentUrl: string[] = [''];
   private navBarWidth: string = '40%';
   @BuilderParam settingPageLoader: ($$: Params) => void = dummyFunction;
@@ -368,6 +369,7 @@ struct SettingsHome {
       .mode(this.defaultNavigationMode)
       .navBarWidth(this.navBarWidth)
       .hideTitleBar(this.isSearching, true)
+      .padding({ top: this.floatTopAvoid })
       .backgroundColor(Color.Transparent)
       .navDestination(this.myRouter)
       .titleMode(NavigationTitleMode.Free)
@@ -408,6 +410,7 @@ struct SettingsHome {
       .mode(this.defaultNavigationMode)
       .navBarWidth(this.navBarWidth)
       .hideTitleBar(this.isSearching, true)
+      .padding({ top: this.floatTopAvoid })
       .backgroundColor(Color.Transparent)
       .navDestination(this.myRouter)
       .titleMode(NavigationTitleMode.Free)
@@ -509,6 +512,7 @@ struct SettingsHome {
     this.registerNavigationChange();
     this.registerThemeListener();
     this.registerPowerModeChange();
+    this.setBarWidthByWindowSize();
     AppStorage.setOrCreate<NavPathStack>(PackagesConstant.SETTINGS_PATH_STACK, this.pathInfos);
     DynamicLoader.getInstance().register(async (str: string): Promise<boolean> => {
       return await this.dynamicLoadCallBack(str);
@@ -802,9 +806,6 @@ struct SettingsHome {
   }
 
   setBarWidthByWindowSize(): void {
-    if (!PageConfig.getInstance().isSplitMode()) {
-      return;
-    }
     LogUtil.info(`${TAG} setBarWidthByWindowSize`);
     try {
       (AppStorage.get<Window.WindowStage>('windowStage') as Window.WindowStage)?.getMainWindow((err, data) => {
@@ -812,7 +813,11 @@ struct SettingsHome {
           LogUtil.error(`${TAG} Failed to setBarWidthByWindowSize, data is empty`);
           return;
         }
+        // 手机/分屏均需监听，用于悬浮窗顶部避让校准
         this.registerWindowSizeChange(data);
+        if (!PageConfig.getInstance().isSplitMode()) {
+          return;
+        }
         let windowRect: Window.Rect = data.getWindowProperties()?.windowRect;
         if (!windowRect) {
           LogUtil.error(`${TAG} Failed to setBarWidthByWindowSize, windowRect is empty`);
@@ -829,6 +834,8 @@ struct SettingsHome {
   private registerWindowSizeChange(data: Window.Window): void {
     data?.off('windowSizeChange');
     data?.on('windowSizeChange', (size: Window.Size) => {
+      // 切悬浮时 windowStatusChange 可能丢失，用尺寸变化校准 FLOATING 与顶部避让
+      WindowManager.updateFloatWindowAvoid(data);
       const windowMode: number = AppStorage.get('windowMode') as number;
       LogUtil.info(`${TAG} windowSizeChange mode: ${windowMode}, size: ${size?.width}, ${size?.height}`);
       if (PageConfig.getInstance().isSplitMode()) {
