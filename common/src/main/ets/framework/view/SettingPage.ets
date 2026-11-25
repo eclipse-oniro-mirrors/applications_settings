@@ -512,7 +512,7 @@ export struct SettingPage {
       .width('100%')
       .height('100%')
       .cachedCount(25)
-      .edgeEffect(EdgeEffect.Spring)
+      .edgeEffect(EdgeEffect.Spring,{ alwaysEnabled: true })
       .borderRadius(this.getSettingItemBorderRadius(0, 1))
       .scrollBar(BarState.Off)
       .contentEndOffset(this.layout?.padding?.bottom?.value)
