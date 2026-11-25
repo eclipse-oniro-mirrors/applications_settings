@@ -44,6 +44,7 @@ const ABILITY_NAME: string = 'IntelligentSceneUIExtSettingAbility';
 const SUB_PAGE_ENTRY_KEY: string = 'sub_page_entry_key';
 const INTELLIGENT_SCENE_HOME_ENTRY: string = 'intelligent_scene_home_entry';
 const MIN_PATH_LENGTH: number = 1;
+let hasPreloadedAppSelect: boolean = false;
 
 class PlaceholderParams {
 }
@@ -155,6 +156,7 @@ export struct IntelligentSceneSettings {
             if (data && data['action'] === 'loadAppList') {
               LogUtil.info(`${TAG} receive load app list`);
               AppListLoader.getInstance().loadAppList();
+              this.preloadAppSelectExtension();
             }
           })
           .size({ width: '100%', height: '100%' })
@@ -174,6 +176,7 @@ export struct IntelligentSceneSettings {
       if (this.navigationMode === NavigationMode.Stack) {
         this.viewModel.delayTransition();
       }
+      this.preloadAppSelectExtension();
     })
     .onHidden(() => {
       LogUtil.info(`${TAG} NavDestination onHidden`);
@@ -289,6 +292,15 @@ export struct IntelligentSceneSettings {
     LogUtil.info(`${TAG} aboutToDisappear`);
     this.viewModel.destroyListening();
     this.unRegisterListener();
+  }
+
+  private preloadAppSelectExtension(): void {
+    if (hasPreloadedAppSelect) {
+      return;
+    }
+    hasPreloadedAppSelect = true;
+    ExternalMenuPreloadManager.getInstance()
+      .preloadUIExtensionAbility(NavEntryKey.INTELLIGENT_SCENE_APP_SELECT, getContext());
   }
 
   private registerListener(): void {
