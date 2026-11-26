@@ -97,8 +97,10 @@ export default class IntelligentSceneAppSelectExtensionAbility extends UIExtensi
       EventBus.getInstance().emit(EVENT_APP_LIST_LOAD_COMPLETE);
       return;
     }
-    if (data && data['action'] === 'getLoadState' && data['loadState'] as boolean === true) {
-      LogUtil.showInfo(TAG, `loadState: ${data['loadState']}`);
+    // 无论宿主预热是否完成，都触发本进程 loadAppList：
+    // loadState=true 走快路径；false 时自加载兜底，避免壳已出列表一直「正在加载」
+    if (data && data['action'] === 'getLoadState') {
+      LogUtil.showInfo(TAG, `loadState: ${data['loadState']}, trigger appListLoadComplete`);
       EventBus.getInstance().emit(EVENT_APP_LIST_LOAD_COMPLETE);
     }
   }

@@ -43,6 +43,7 @@ import { CapabilitySupportUtils } from '@ohos/settings.common/src/main/ets/utils
 import { PenglaiUtil } from '@ohos/settings.common/src/main/ets/utils/BaseUtils';
 import { SystemParamUtils } from '@ohos/settings.common/src/main/ets/screenReader/utils/SystemParamUtils';
 import { CheckEmptyUtils } from '@ohos/settings.common/src/main/ets/utils/CheckEmptyUtils';
+import { CARD_NUM_MAX, CARD_NUM_ONE, SLOTID_ONE, SLOTID_TWO } from '@ohos/settings.common/src/main/ets/constant/SimConstant';
 import { DisplayUtils } from '@ohos/settings.common/src/main/ets/utils/DisplayUtils';
 
 const TAG = 'SearchCheckUtil';
@@ -713,6 +714,27 @@ export class SearchCheckUtil {
 
   static hasSimCard(): boolean {
     return SimUtils.hasSimCard();
+  }
+
+  /**
+   * 双卡机且卡槽 0 已插卡，对应搜索项「SIM 卡 1 应用程序」
+   */
+  static hasSimCardApplicationSlotOne(): boolean {
+    return SimUtils.getCardSlotNum() === CARD_NUM_MAX && SimUtils.hasSimCardSync(SLOTID_ONE);
+  }
+
+  /**
+   * 双卡机且卡槽 1 已插卡，对应搜索项「SIM 卡 2 应用程序」
+   */
+  static hasSimCardApplicationSlotTwo(): boolean {
+    return SimUtils.getCardSlotNum() === CARD_NUM_MAX && SimUtils.hasSimCardSync(SLOTID_TWO);
+  }
+
+  /**
+   * 单卡机且已插卡，对应搜索项「SIM 卡应用程序」
+   */
+  static hasSimCardApplicationSingle(): boolean {
+    return SimUtils.getCardSlotNum() === CARD_NUM_ONE && SimUtils.hasSimCardSync(SLOTID_ONE);
   }
 
   static isWhiperAwakeSupport(): boolean {

@@ -60,6 +60,13 @@ const GRID_CONTENT_MARGIN_RATIO: number = 0.75;
 const GRID_COLUMN_WIDTH_KEY: string = 'grid_row_column_width_key';
 const GRID_ROW_HOME_WIDTH_KEY: string = 'grid_row_home_width_key';
 const GRID_ROW_MARGIN_FULL_PAGE_KEY: string = 'grid_row_margin_full_page_key';
+/** AppStorage：悬浮窗顶部避让高度（vp） */
+export const FLOAT_TOP_AVOID_KEY: string = 'floatTopAvoid';
+/**
+ * 悬浮窗系统装饰高度兜底（vp）。
+ * getWindowDecorHeight 在手机悬浮场景常返回 0，需与 SCB 标题栏大致对齐。
+ */
+const FLOAT_DECOR_FALLBACK_VP: number = 40;
 
 
 export interface WindowInfo {
@@ -740,6 +747,44 @@ export class WindowManager {
     WindowManager.setPreferredOrientation(windowData, orientation);
   }
 
+  /**
+   * 根据窗口状态刷新悬浮窗顶部避让高度。
+   * 切悬浮时 mode=102 可能不下发，调用方可在 windowSizeChange 中再次校准。
+   */
+  static updateFloatWindowAvoid(windowData?: window.Window,
+    windowStatusType?: window.WindowStatusType): void {
+    if (!windowData) {
+      windowData = AppStorage.get<window.Window>('mainWindow');
+    }
+    if (!windowData) {
+      LogUtil.error(`${TAG} updateFloatWindowAvoid failed, window is empty`);
+      return;
+    }
+    try {
+      const status: window.WindowStatusType = windowStatusType ?? windowData.getWindowStatus();
+      AppStorage.setOrCreate<number>('windowMode', status as number);
+      let topAvoidVp: number = 0;
+      if (status === window.WindowStatusType.FLOATING) {
+        let decorHeightPx: number = 0;
+        try {
+          decorHeightPx = windowData.getWindowDecorHeight() ?? 0;
+        } catch (decorErr) {
+          LogUtil.error(`${TAG} getWindowDecorHeight fail: ${(decorErr as BusinessError)?.message}`);
+        }
+        topAvoidVp = decorHeightPx > 0 ? px2vp(decorHeightPx) : FLOAT_DECOR_FALLBACK_VP;
+        AppStorage.setOrCreate<number>('windowTitleHeight',
+          decorHeightPx > 0 ? decorHeightPx : Math.round(vp2px(FLOAT_DECOR_FALLBACK_VP)));
+      } else {
+        AppStorage.setOrCreate<number>('windowTitleHeight', 0);
+      }
+      AppStorage.setOrCreate<number>(FLOAT_TOP_AVOID_KEY, topAvoidVp);
+      LogUtil.info(`${TAG} updateFloatWindowAvoid status=${status}, floatTopAvoid=${topAvoidVp}`);
+    } catch (err) {
+      LogUtil.error(`${TAG} updateFloatWindowAvoid failed. Error code: ${(err as BusinessError)?.code}` +
+        ` message: ${(err as BusinessError)?.message}`);
+    }
+  }
+
   static async setWindowProperties(context: Context, windowStage: window.WindowStage): Promise<void> {
     let windowData: window.Window | undefined = AppStorage.get<window.Window>('mainWindow');
     if (!windowData) {
@@ -750,8 +795,8 @@ export class WindowManager {
       let windowStatusType = windowData?.getWindowStatus();
       if (windowStatusType) {
         LogUtil.info(`${TAG} getWindowStatus, window status type is ${windowStatusType}`);
-        AppStorage.setOrCreate<number>('windowMode', windowStatusType);
         SettingsDataUtils.setSettingsDataWithContext(context, 'settings.windowMode', String(windowStatusType));
+        WindowManager.updateFloatWindowAvoid(windowData, windowStatusType);
       }
     } catch (err) {
       LogUtil.error(`${TAG} setWindowProperties failed. Error code: ${err.code} message: ${err.message}`);
@@ -759,8 +804,12 @@ export class WindowManager {
 
     Promise.resolve(windowData.on('windowStatusChange', (windowStatusType: window.WindowStatusType) => {
       LogUtil.info(`${TAG} windowStatusChange, window type is ${windowStatusType}`);
-      AppStorage.setOrCreate<number>('windowMode', windowStatusType);
       SettingsDataUtils.setSettingsDataWithContext(context, 'settings.windowMode', String(windowStatusType));
+      WindowManager.updateFloatWindowAvoid(windowData, windowStatusType);
+    }));
+    // 切悬浮时 status 回调可能丢失，尺寸变化时用 getWindowStatus 校准避让高度
+    Promise.resolve(windowData.on('windowSizeChange', (_size: window.Size) => {
+      WindowManager.updateFloatWindowAvoid(windowData);
     }));
   }
 
@@ -826,6 +875,7 @@ export class WindowManager {
       AppStorage.setOrCreate<window.Size>('windowSize', { width: windowRect.width, height: windowRect.height });
       try {
         AppStorage.setOrCreate<number>('windowTitleHeight', data?.getWindowDecorHeight() ?? 0);
+        WindowManager.updateFloatWindowAvoid(data);
       } catch (err) {
         LogUtil.error(`${TAG} getWindowDecorHeight fail: code: ${err?.code} message: ${err?.message}`);
       }
