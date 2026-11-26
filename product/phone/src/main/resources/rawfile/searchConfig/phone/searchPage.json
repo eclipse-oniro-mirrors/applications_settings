@@ -1,6 +1,6 @@
 {
   "version": {
-    "curVersion": "1.0.6"
+    "curVersion": "1.0.7"
   },
   "searchPages": [
     {
@@ -590,11 +590,7 @@
           "itemTitle": "$string:font_style_theme",
           "itemDescription": "",
           "icon": "$media:ic_public_themes",
-          "checkItem": {
-            "type": "function",
-            "checkKey": "isSmallFoldProduct",
-            "value": "false"
-          }
+          "enable": "false"
         }
       ]
     },
@@ -613,11 +609,7 @@
           "itemTitle": "$string:font_style_theme",
           "itemDescription": "",
           "icon": "$media:ic_public_themes",
-          "checkItem": {
-            "type": "function",
-            "checkKey": "isSmallFoldProduct",
-            "value": "true"
-          }
+          "enable": "false"
         }
       ]
     },
@@ -724,18 +716,13 @@
           "itemTitle": "$string:screenlock_font_creation_service",
           "itemDescription": "",
           "icon": "",
-          "enable": "true",
+          "enable": "false",
           "childItems": "",
           "alias": "锁屏|鎖屏|字体创作|lock screen|suoping|服务|锁屏字体创作服务|zitichuangzuo|font creation service",
           "supportDevices": [
             "phone",
             "tablet"
-          ],
-          "checkItem": {
-            "type": "param",
-            "checkKey": "const.sceneboard.screenlock.art_signature_config",
-            "value": "0"
-          }
+          ]
         }
       ]
     },
@@ -1558,15 +1545,6 @@
           }
         },
         {
-          "itemName": "screenshot_prompt_tone",
-          "itemTitle": "$string:screenshot_prompt_tone",
-          "itemDescription": "",
-          "icon": "",
-          "enable": "true",
-          "childItems": "",
-          "alias": "截屏音效|截屏声|Screenshot|jiepingtishiyin"
-        },
-        {
           "itemName": "dial_tone",
           "itemTitle": "$string:dial_Tone",
           "itemDescription": "",
@@ -1935,15 +1913,6 @@
           "enable": "",
           "childItems": "",
           "alias": ""
-        },
-        {
-          "itemName": "screen_on_time_today",
-          "itemTitle": "$string:screen_on_time_today",
-          "itemDescription": "",
-          "icon": "",
-          "enable": "true",
-          "childItems": "",
-          "alias": "亮屏时间|用了多久"
         },
         {
           "itemName": "application_power_percent",
@@ -2435,7 +2404,7 @@
           "itemDescription": "",
           "icon": "$media:ic_accessibility",
           "enable": "true",
-          "childItems": "accessibility_visual_aids,accessibility_hearing_aids,accessibility_interactive_control,elder_care,elder_care_switch,zoom_gesture,highContrast_text,invert_color,color_correction,accessibility_features,transition_animation_text,audio_adjustment,single_audio,audio_balance,flash_reminder_item,reminder_alarmClock_switch,touchscreen_settings,touch_duration,ignore_repeated_touches,accessibility_shortcut,shortKey_lock_screen,function_select,screenreader_switch,screenreader_more_settings",
+          "childItems": "accessibility_visual_aids,accessibility_hearing_aids,accessibility_interactive_control,elder_care,elder_care_switch,zoom_gesture,highContrast_text,invert_color,color_correction,accessibility_features,transition_animation_text,audio_adjustment,single_audio,audio_balance,flash_reminder_item,reminder_alarmClock_switch,touchscreen_settings,touch_duration,ignore_repeated_touches,accessibility_shortcut,shortKey_lock_screen,function_select",
           "alias": "Accessibility features|fuzhugongneng|fuzhu|无障碍|wuzhangai|辅助功能|辅助|关怀|guanhuai|关怀和无障碍|guanhuaihewuzhangai"
         },
         {
@@ -2807,58 +2776,6 @@
             "checkKey": "isFlashReminderOpen",
             "value": "true"
           }
-        }
-      ]
-    },
-    {
-      "pageTitle": "$string:screenreader_more_settings",
-      "pageDescription": "",
-      "entryKey": "screen_reader_more_settings_entry",
-      "params": "",
-      "path": [
-        "$string:accessibility_original",
-        "$string:screenreader",
-        "$string:screenreader_more_settings"
-      ],
-      "searchItems": [
-        {
-          "itemName": "screenreader_more_settings",
-          "itemTitle": "$string:screenreader_more_settings",
-          "itemDescription": "",
-          "icon": "",
-          "enable": "true",
-          "childItems": "",
-          "alias": "屏幕朗读更多设置|ScreenReader more settings"
-        }
-      ]
-    },
-    {
-      "pageTitle": "$string:screenreader",
-      "pageDescription": "",
-      "entryKey": "accessibility_screen_reader_entry",
-      "params": "",
-      "path": [
-        "$string:accessibility_original",
-        "$string:screenreader"
-      ],
-      "searchItems": [
-        {
-          "itemName": "screenreader_switch",
-          "itemTitle": "$string:screenreader",
-          "itemDescription": "",
-          "icon": "",
-          "enable": "true",
-          "childItems": "screenreader_more_settings",
-          "alias": "屏幕朗读|ScreenReader|screen reader|langdu|pingmulangdu"
-        },
-        {
-          "itemName": "screenreader_more_settings",
-          "itemTitle": "$string:screenreader_more_settings",
-          "itemDescription": "",
-          "icon": "",
-          "enable": "true",
-          "childItems": "",
-          "alias": "屏幕朗读更多设置|ScreenReader more settings"
         }
       ]
     },

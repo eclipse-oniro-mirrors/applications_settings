@@ -40,6 +40,7 @@ import {
   changePrivacySearchItem
 } from '../../pages/biometricsandpassword/module/privacyPassword/common/PrivacyPassword';
 import { AccessibilityUtils } from '@ohos/settings.common/src/main/ets/utils/AccessibilityUtils';
+import { SearchItemDynamicUpdateUtil } from '../Home/utils/SearchItemDynamicUpdateUtil';
 
 /* instrument ignore file */
 const TAG = 'SearchSettings';
@@ -88,6 +89,7 @@ export struct SearchSettingsComponent {
 
   aboutToAppear() {
     LogUtil.showInfo(TAG, 'aboutToAppear');
+    SearchItemDynamicUpdateUtil.getInstance().updateSearchItemsOfSimApplication();
     this.searchController.getHistoryData().then(res => {
       this.historyList = res;
     });

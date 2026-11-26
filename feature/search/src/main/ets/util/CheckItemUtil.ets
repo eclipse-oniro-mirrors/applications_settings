@@ -110,6 +110,9 @@ const ITEM_STATUS_FUN_RECORD: Record<string, Function> = {
   'isCompatibleMode': SearchCheckUtil.isCompatibleMode,
   'isEnterpriseCustomInfoSupport': SearchCheckUtil.isEnterpriseCustomInfoSupport,
   'hasSimCard': SearchCheckUtil.hasSimCard,
+  'hasSimCardApplicationSlotOne': SearchCheckUtil.hasSimCardApplicationSlotOne,
+  'hasSimCardApplicationSlotTwo': SearchCheckUtil.hasSimCardApplicationSlotTwo,
+  'hasSimCardApplicationSingle': SearchCheckUtil.hasSimCardApplicationSingle,
   // 使用新鼠标页面的配置
   'ifUseNewMousePage': SearchCheckUtil.isUseNewMousePage,
   'isPcDeviceInfoSupportShow': SearchCheckUtil.isPcDeviceInfoSupportShow,

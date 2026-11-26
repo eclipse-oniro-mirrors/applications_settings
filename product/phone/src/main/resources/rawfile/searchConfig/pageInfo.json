@@ -201,7 +201,7 @@
     {
       "entryKey": "theme_font",
       "parentKey": "theme_settings",
-      "isVisible": true,
+      "isVisible": false,
       "permission": ""
     },
     {
@@ -1035,18 +1035,6 @@
     {
       "entryKey": "pc_network_proxy_settings",
       "parentKey": "network_settings",
-      "isVisible": true,
-      "permission": ""
-    },
-    {
-      "entryKey": "accessibility_screen_reader_entry",
-      "parentKey": "accessibility_feature",
-      "isVisible": true,
-      "permission": ""
-    },
-    {
-      "entryKey": "screen_reader_more_settings_entry",
-      "parentKey": "accessibility_screen_reader_entry",
       "isVisible": true,
       "permission": ""
     }

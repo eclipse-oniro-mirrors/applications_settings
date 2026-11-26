@@ -21,7 +21,6 @@ import {
   DEFAULT_SCHEDULED_POWER_OFF_TIME,
   DEFAULT_SCHEDULED_POWER_ON_OFF_REPEAT,
   DEFAULT_SCHEDULED_POWER_ON_OFF_WEEK_REPEAT,
-  DEFAULT_SCHEDULED_POWER_ON_TIME,
   SCHEDULED_POWER_OFF_TIME,
   SCHEDULED_POWER_OFF_TIMER_DATE,
   SCHEDULED_POWER_ON_OFF_CALENDAR_DATA,
@@ -64,10 +63,11 @@ export class ScheduledPowerOnOffDataUtil {
    * @param context context上下文
    */
   static getPowerOnTime(tag: string, context?: common.Context): string {
+    // 定时开机暂不支持，缺省按未设置处理，避免与关机时间做间隔校验
     let powerOnTime: string = context ? SettingsDataUtils
-      .getSettingsDataWithContext(context, SCHEDULED_POWER_ON_TIME, DEFAULT_SCHEDULED_POWER_ON_TIME,
+      .getSettingsDataWithContext(context, SCHEDULED_POWER_ON_TIME, SCHEDULED_POWER_TIME_NOT_SET,
         settings.domainName.DEVICE_SHARED) : SettingsDataUtils
-      .getSettingsData(SCHEDULED_POWER_ON_TIME, DEFAULT_SCHEDULED_POWER_ON_TIME,
+      .getSettingsData(SCHEDULED_POWER_ON_TIME, SCHEDULED_POWER_TIME_NOT_SET,
         settings.domainName.DEVICE_SHARED);
     LogUtil.showInfo(TAG, `${tag} getPowerOnTime ${powerOnTime}`);
     return powerOnTime;
@@ -184,14 +184,15 @@ export class ScheduledPowerOnOffDataUtil {
     if (context) {
       SettingsDataUtils.setSettingsDataWithContext(context, SCHEDULED_POWER_ON_OFF_SWITCH, SCHEDULED_POWER_ON_OFF_CLOSE,
         settings.domainName.DEVICE_SHARED);
-      SettingsDataUtils.setSettingsDataWithContext(context, SCHEDULED_POWER_ON_TIME, DEFAULT_SCHEDULED_POWER_ON_TIME,
+      // 定时开机暂不支持，关闭时开机时间置为未设置
+      SettingsDataUtils.setSettingsDataWithContext(context, SCHEDULED_POWER_ON_TIME, SCHEDULED_POWER_TIME_NOT_SET,
         settings.domainName.DEVICE_SHARED);
       SettingsDataUtils.setSettingsDataWithContext(context, SCHEDULED_POWER_OFF_TIME, DEFAULT_SCHEDULED_POWER_OFF_TIME,
         settings.domainName.DEVICE_SHARED);
     } else {
       SettingsDataUtils.setSettingsData(SCHEDULED_POWER_ON_OFF_SWITCH, SCHEDULED_POWER_ON_OFF_CLOSE,
         settings.domainName.DEVICE_SHARED);
-      SettingsDataUtils.setSettingsData(SCHEDULED_POWER_ON_TIME, DEFAULT_SCHEDULED_POWER_ON_TIME,
+      SettingsDataUtils.setSettingsData(SCHEDULED_POWER_ON_TIME, SCHEDULED_POWER_TIME_NOT_SET,
         settings.domainName.DEVICE_SHARED);
       SettingsDataUtils.setSettingsData(SCHEDULED_POWER_OFF_TIME, DEFAULT_SCHEDULED_POWER_OFF_TIME,
         settings.domainName.DEVICE_SHARED);

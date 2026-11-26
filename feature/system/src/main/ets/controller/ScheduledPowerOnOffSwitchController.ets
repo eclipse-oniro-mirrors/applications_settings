@@ -47,7 +47,6 @@ import {
   DEFAULT_SCHEDULED_POWER_OFF_TIME,
   DEFAULT_SCHEDULED_POWER_ON_OFF_REPEAT,
   DEFAULT_SCHEDULED_POWER_ON_OFF_WEEK_REPEAT,
-  DEFAULT_SCHEDULED_POWER_ON_TIME,
   MIN_60,
   SCHEDULED_POWER_OFF_TIME,
   SCHEDULED_POWER_ON_OFF_CLOSE,
@@ -178,8 +177,9 @@ export class ScheduledPowerOnOffSwitchController extends ScheduledPowerOnOffCont
 
   private addTimeSelectItem(): void {
     observer.on('callStateChange', this.callStateChangeCallback);
-    // 开机定时器暂不支持
+    // 开机定时器暂不支持：清空开机时间，避免关机时间校验仍对比历史/默认开机值
     // this.addPowerOnItem();
+    ScheduledPowerOnOffDataUtil.resetPowerOnTime(TAG);
     this.addPowerOffItem();
     SettingsDataUtils.registerKeyObserverWithDomain(SCHEDULED_POWER_ON_TIME, settings.domainName.DEVICE_SHARED, () => {
       if (ScheduledPowerOnOffDataUtil.getPowerOnTime(TAG) == SCHEDULED_POWER_TIME_NOT_SET) {
@@ -437,11 +437,9 @@ export class ScheduledPowerOnOffSwitchController extends ScheduledPowerOnOffCont
   }
 
   private initDateHelper() {
-    if (CheckEmptyUtils.checkStrIsEmpty(SettingsDataUtils
-      .getSettingsData(SCHEDULED_POWER_ON_TIME, '', settings.domainName.DEVICE_SHARED))) {
-      LogUtil.showInfo(TAG, `init default powerOnTime`);
-      this.setPowerOnTime(DEFAULT_SCHEDULED_POWER_ON_TIME);
-    }
+    // 开机定时器暂不支持，不写默认开机时间，统一置为未设置
+    LogUtil.showInfo(TAG, `init powerOnTime as not set`);
+    this.setPowerOnTime(SCHEDULED_POWER_TIME_NOT_SET);
     if (CheckEmptyUtils.checkStrIsEmpty(SettingsDataUtils
       .getSettingsData(SCHEDULED_POWER_OFF_TIME, '', settings.domainName.DEVICE_SHARED))) {
       LogUtil.showInfo(TAG, `init default powerOffTime`);
